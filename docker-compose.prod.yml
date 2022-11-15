@@ -1,0 +1,33 @@
+version: "3.8"
+services:
+  nuxt_prod_nginx:
+    image: nginx:stable-alpine
+    container_name: nuxt_prod_nginx_container
+    ports:
+      - "${PORT}:80"
+    environment:
+      - NUXT_PORT=${PORT}
+      - SERVER_NAME=${SERVER_NAME}
+    volumes:
+      - .nginx:/etc/nginx/templates
+      - .logs:/var/log/nginx"
+      - /data/nginx/cache
+    networks:
+      - nuxt_prod_network
+    depends_on:
+      - nuxt_prod
+
+  nuxt_prod:
+    image: nuxt_prod_image
+    container_name: nuxt_prod_container
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    env_file: .env
+    restart: unless-stopped
+    command: "npm run start"
+    networks:
+      - nuxt_prod_network
+
+networks:
+  nuxt_prod_network:

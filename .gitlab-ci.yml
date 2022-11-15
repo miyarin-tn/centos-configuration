@@ -1,0 +1,79 @@
+image: docker:20.10.17
+services:
+  - docker:20.10.17-dind
+
+stages:
+  - build
+  - release
+  - deploy
+
+before_script:
+  - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+
+.env_script:
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - echo "PORT=$PORT" >> .env
+    - echo "SERVER_NAME=$SERVER_NAME" >> .env
+    - echo "DOMAIN=$DOMAIN" >> .env
+
+build:
+  stage: build
+  extends: .env_script
+  script:
+    - docker pull $CI_REGISTRY_IMAGE:latest || true
+    - docker build --cache-from $CI_REGISTRY_IMAGE:latest --tag $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA --file Dockerfile.prod .
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+  only:
+    - master
+
+release-tag:
+  variables:
+    GIT_STRATEGY: none
+  stage: release
+  script:
+    - docker pull $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+    - docker tag $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
+  except:
+    - master
+
+release:
+  variables:
+    GIT_STRATEGY: none
+  stage: release
+  script:
+    - docker pull $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+    - docker tag $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA $CI_REGISTRY_IMAGE:latest
+    - docker push $CI_REGISTRY_IMAGE:latest
+  only:
+    - master
+
+deploy:
+  stage: deploy
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client git -y )'
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - ssh-keyscan $SSH_HOST >> ~/.ssh/known_hosts
+    - echo 'Deploying...'
+    - >
+      ssh $SSH_USER@$SSH_HOST
+      "docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY};
+      cd ${PATH_TO_PROJECT};
+      git checkout .;
+      git checkout master;
+      git pull origin master;
+      docker-compose -f docker-compose.prod.yml down;
+      docker pull ${CI_REGISTRY_IMAGE}:latest;
+      docker-compose -f docker-compose.prod.yml up -d;
+      docker image prune -f;
+      exit;"
+    - echo 'Deployed'
+  environment:
+    name: production
+  only:
+    - master

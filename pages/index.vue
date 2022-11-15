@@ -1,0 +1,61 @@
+<template>
+  <div>
+    <div class="head-title">
+      <div class="block-inner">
+        <h2 class="main-title">{{ $t('INTRODUCTION') }}</h2>
+      </div>
+    </div>
+    <div class="content-inner">
+      <div class="block-inner">
+        <div class="inner-item">
+          <h3 class="sub-title title-anchor" id="usage">
+            <a href="#usage" class="anchor">
+              <span>#</span> {{$t('USAGE')}}
+            </a>
+          </h3>
+          <div class="inner-paragraph">
+            <ul>
+              <li>
+                <p>{{$t('INSTRUCTION_CONFIG_SERVER')}}</p>
+              </li>
+              <li>
+                <p>{{$t('INSTRUCTION_INSTALL_APPLICATION')}}</p>
+              </li>
+              <li>
+                <p>{{$t('MORE_INSTALLATION_INSTRUCTION')}}</p>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script lang="ts">
+
+export default {
+  // @ts-ignore
+  name: 'IndexPage',
+  // @ts-ignore
+  head() {
+    // @ts-ignore
+    const fullPath = this.$nuxt.$route.fullPath.replace(/\/+$/, '')
+    const url = `${process.env.DOMAIN}${fullPath ? '/' + fullPath : ''}`;
+    let meta: any = {
+      // @ts-ignore
+      title: this.$t('INTRODUCTION'),
+      meta: [
+        // @ts-ignore
+        { hid: 'description', name: 'description', content: this.$t('INTRODUCTION') },
+        // @ts-ignore
+        { hid: 'og:title', property: 'og:title', content: this.$t('INTRODUCTION') },
+        // @ts-ignore
+        { hid: 'og:description', property: 'og:description', content: this.$t('INTRODUCTION') },
+        { hid: 'og:url', property: 'og:url', content: url },
+      ],
+    };
+    return meta;
+  },
+}
+</script>
